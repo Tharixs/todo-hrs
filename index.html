@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Todo List</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body class="bg-gray-100 min-h-screen flex items-center justify-center">
+    <div class="w-full max-w-2xl bg-white p-6 rounded-2xl shadow-md " >
+      <div id="loginSection" class="mb-4 space-y-4">
+        <h1 class="text-lg font-bold mb-2 text-center">My Simple Todo List <br/> Web App</h1>
+        <h3 class="text-lg font-light mb-2 text-center">Login</h3>
+        <input type="text" id="username" placeholder="Masukkan nama" class="border p-2 w-full mb-2" required/>
+        <input type="text" id="jobTitle" placeholder="Masukkan jabatan" class="border p-2 w-full mb-2" required />
+        <button onclick="login()" class="bg-blue-500 text-white px-4 py-2 rounded w-full">Login</button>
+      </div>
+
+      <div id="todoApp" class="hidden">
+        <div class="flex justify-between items-center mb-4">
+          <h2 class="text-lg font-bold">Todo List</h2>
+          <span id="loggedUser" class="text-sm text-gray-600"></span>
+          <button onclick="logout()" class="bg-red-500 text-white px-2 py-1 rounded">Logout</button>
+        </div>
+
+        <input type="text" id="todoInput" placeholder="Tambahkan tugas" class="border p-2 w-full mb-2" />
+        <select id="difficulty" class="border p-2 w-full mb-2">
+          <option value="low">Low</option>
+          <option value="medium">Medium</option>
+          <option value="high">High</option>
+        </select>
+        <input type="date" id="dueDate" class="border p-2 w-full mb-2" placeholder="Tanggal Berakhir" />
+        <div class="flex gap-2">
+            <button onclick="addTodo()" class="bg-green-500 text-white px-4 py-2 rounded w-full">Tambah</button>
+            <button onclick="deleteAllTodos()" class="bg-red-500 text-white px-4 py-2 rounded w-full">Hapus Semua</button>
+        </div>
+        <table class="w-full mt-4 border-collapse border border-gray-300">
+          <thead>
+            <tr class="bg-gray-200">
+              <th class="border p-2"></th>
+              <th class="border p-2">Nama Tugas</th>
+              <th class="border p-2">Tanggal Berakhir</th>
+              <th class="border p-2">Status</th>
+              <th class="border p-2">Action</th>
+            </tr>
+          </thead>
+          <tbody id="todoList"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        const username = localStorage.getItem("username");
+        const jobTitle = localStorage.getItem("jobTitle");
+        if (username && jobTitle) {
+          document.getElementById("loggedUser").innerText = username + " - " + jobTitle;
+          document.getElementById("loginSection").classList.add("hidden");
+          document.getElementById("todoApp").classList.remove("hidden");
+          loadTodos();
+        }
+      });
+
+      function login() {
+        const username = document.getElementById("username").value;
+        const jobTitle = document.getElementById("jobTitle").value;
+        if (username && jobTitle) {
+          localStorage.setItem("username", username);
+          localStorage.setItem("jobTitle", jobTitle);
+          location.reload();
+        }else {
+          alert("Username dan Jabatan harus diisi");
+        }
+      }
+
+      function logout() {
+        localStorage.clear();
+        location.reload();
+      }
+
+      function addTodo() {
+        const todoText = document.getElementById("todoInput").value;
+        const difficulty = document.getElementById("difficulty").value;
+        const dueDate = document.getElementById("dueDate").value || "-";
+        if (!todoText.trim()) return;
+        if(dueDate !== "-" && new Date(dueDate) < new Date()) {
+          alert("Tanggal berakhir harus lebih dari tanggal sekarang");
+          return;
+        }
+
+        let todos = JSON.parse(localStorage.getItem("todos")) || [];
+        todos.push({ text: todoText, difficulty, dueDate, status: "belum" });
+        localStorage.setItem("todos", JSON.stringify(todos));
+        document.getElementById("todoInput").value = "";
+        loadTodos();
+      }
+
+     function loadTodos() {
+        const todoList = document.getElementById("todoList");
+        todoList.innerHTML = "";
+        let todos = JSON.parse(localStorage.getItem("todos")) || [];
+
+        todos.forEach((todo, index) => {
+          const now = new Date().toISOString();
+          const isOverdue = todo.dueDate !== "-" && now > todo.dueDate;
+          const isCompleted = todo.status === "selesai";
+          const textStyle = isOverdue
+            ? "line-through text-red-500"
+            : isCompleted
+            ? "line-through text-black"
+            : "";
+
+          const row = document.createElement("tr");
+          row.innerHTML = `
+            <td class="border border-gray-300 p-2 text-center">
+              <input type="checkbox" onchange="toggleStatus(${index})" ${isCompleted ? "checked" : ""}>
+            </td>
+            <td class="border border-gray-300 p-2 ${textStyle}">${todo.text} (${todo.difficulty})</td>
+            <td class="border border-gray-300 p-2">${todo.dueDate !== "-" ? new Date(todo.dueDate).toLocaleString() : "-"}</td>
+            <td class="border border-gray-300 p-2">${todo.status}</td>
+            <td class="border border-gray-300 p-2">
+              <button onclick="openEditModal(${index})" class="bg-blue-500 text-white px-2 py-1 rounded">Edit</button>
+              <button onclick="deleteTodo(${index})" class="bg-red-500 text-white px-2 py-1 rounded">Hapus</button>
+            </td>
+          `;
+          todoList.appendChild(row);
+        });
+      }
+
+      function toggleStatus(index) {
+        let todos = JSON.parse(localStorage.getItem("todos"));
+        todos[index].status = todos[index].status === "selesai" ? "proses" : "selesai";
+        localStorage.setItem("todos", JSON.stringify(todos));
+        loadTodos();
+      }
+
+      function deleteTodo(index) {
+        let todos = JSON.parse(localStorage.getItem("todos"));
+        todos.splice(index, 1);
+        localStorage.setItem("todos", JSON.stringify(todos));
+        loadTodos();
+      }
+
+      function deleteAllTodos() {
+        localStorage.removeItem("todos");
+        loadTodos();
+      }
+    </script>
+  </body>
+</html>
